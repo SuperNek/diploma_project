@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %> - Админ-панель</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            padding-top: 56px;
+            background-color: #f8f9fa;
+        }
+        .sidebar {
+            position: fixed;
+            top: 56px;
+            bottom: 0;
+            left: 0;
+            z-index: 100;
+            padding: 20px 0;
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            overflow-y: auto;
+        }
+        .main-content {
+            margin-left: 250px;
+            padding: 20px;
+        }
+        @media (max-width: 991.98px) {
+            .sidebar {
+                width: 250px;
+                transform: translateX(-100%);
+                transition: transform 0.3s ease-in-out;
+            }
+            .sidebar.show {
+                transform: translateX(0);
+            }
+            .main-content {
+                margin-left: 0;
+            }
+        }
+        .nav-link {
+            color: #333;
+            border-radius: 5px;
+            margin: 0.25rem 0.5rem;
+            padding: 0.5rem 1rem;
+            transition: all 0.2s;
+        }
+        .nav-link:hover, .nav-link.active {
+            background-color: #0d6efd;
+            color: white !important;
+        }
+        .nav-link i {
+            width: 20px;
+            text-align: center;
+            margin-right: 10px;
+        }
+        .stat-card {
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075);
+            transition: transform 0.2s;
+            margin-bottom: 1.5rem;
+            height: 100%;
+        }
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        .stat-icon {
+            font-size: 2rem;
+            opacity: 0.8;
+        }
+        .ticket-status {
+            font-size: 0.8rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-weight: 500;
+            display: inline-block;
+        }
+        .status-new { 
+            background-color: #cfe2ff; 
+            color: #084298; 
+        }
+        .status-in-progress { 
+            background-color: #fff3cd; 
+            color: #664d03; 
+        }
+        .status-resolved { 
+            background-color: #d1e7dd; 
+            color: #0a3622; 
+        }
+        .status-closed { 
+            background-color: #f8d7da; 
+            color: #58151c; 
+        }
+    </style>
+</head>
+<body>
+    <!-- Навигация -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+        <div class="container-fluid">
+            <button class="btn btn-link navbar-toggler me-2 text-white" type="button" id="sidebarToggle">
+                <i class="fas fa-bars"></i>
+            </button>
+            <a class="navbar-brand" href="/admin">Админ-панель</a>
+            <div class="d-flex align-items-center">
+                <ul class="navbar-nav">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-user me-1"></i> <%= user.fullName %>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="/profile"><i class="fas fa-user-cog me-2"></i>Профиль</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="/auth/logout"><i class="fas fa-sign-out-alt me-2"></i>Выйти</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Сайдбар -->
+            <div class="col-md-3 col-lg-2 d-md-block sidebar collapse">
+                <div class="position-sticky pt-3">
+                    <h5 class="text-muted mb-4">Меню</h5>
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a href="/admin" class="nav-link active mb-2">
+                                <i class="fas fa-tachometer-alt"></i> Дашборд
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="/admin/users" class="nav-link mb-2">
+                                <i class="fas fa-users"></i> Пользователи
+                            </a>
+                        </li>
+                    </ul>
+
+                    <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
+                        <span>Настройки</span>
+                    </h6>
+                    <ul class="nav flex-column mb-2">
+                        <li class="nav-item">
+                            <a href="/settings" class="nav-link mb-2">
+                                <i class="fas fa-cog"></i> Настройки системы
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="/logs" class="nav-link">
+                                <i class="fas fa-history"></i> Логи
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Основной контент -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-4 border-bottom">
+                    <h1 class="h3 mb-0"><i class="fas fa-tachometer-alt me-2"></i>Панель управления</h1>
+                    <div class="d-flex">
+                        <div class="btn-group" role="group">
+                            <a href="/tickets/new" class="btn btn-primary">
+                                <i class="fas fa-plus me-1"></i> Новая заявка
+                            </a>
+                            <button type="button" class="btn btn-outline-secondary">Экспорт</button>
+                            <button type="button" class="btn btn-outline-secondary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+                                <span class="visually-hidden">Выпадающий список</span>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item" href="#">Экспорт в Excel</a></li>
+                                <li><a class="dropdown-item" href="#">Экспорт в PDF</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="#">Другие форматы</a></li>
+                            </ul>
+                        </div>
+                        <div class="btn-group ms-2">
+                            <button type="button" class="btn btn-outline-secondary">
+                                <i class="fas fa-calendar me-1"></i>Неделя
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+                                <span class="visually-hidden">Выбрать период</span>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#">Сегодня</a></li>
+                                <li><a class="dropdown-item" href="#">Вчера</a></li>
+                                <li><a class="dropdown-item active" href="#">Неделя</a></li>
+                                <li><a class="dropdown-item" href="#">Месяц</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="#">Произвольный период</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Статистика -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card bg-primary text-white">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="card-title text-uppercase text-white-50 mb-1">Пользователи</h6>
+                                        <h2 class="mb-0">1,254</h2>
+                                    </div>
+                                    <i class="fas fa-users card-icon"></i>
+                                </div>
+                                <div class="mt-3">
+                                    <span class="badge bg-white text-primary">+12% за месяц</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-success text-white">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="card-title text-uppercase text-white-50 mb-1">Заявки</h6>
+                                        <h2 class="mb-0">324</h2>
+                                    </div>
+                                    <i class="fas fa-ticket-alt card-icon"></i>
+                                </div>
+                                <div class="mt-3">
+                                    <span class="badge bg-white text-success">-5% за неделю</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-warning text-white">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="card-title text-uppercase text-white-50 mb-1">В работе</h6>
+                                        <h2 class="mb-0">56</h2>
+                                    </div>
+                                    <i class="fas fa-tasks card-icon"></i>
+                                </div>
+                                <div class="mt-3">
+                                    <span class="badge bg-white text-warning">+3 новых</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-danger text-white">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="card-title text-uppercase text-white-50 mb-1">Просрочено</h6>
+                                        <h2 class="mb-0">8</h2>
+                                    </div>
+                                    <i class="fas fa-exclamation-triangle card-icon"></i>
+                                </div>
+                                <div class="mt-3">
+                                    <span class="badge bg-white text-danger">Требуют внимания</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Графики и таблицы -->
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">Активность заявок</h5>
+                            </div>
+                            <div class="card-body">
+                                <div style="height: 300px;" class="d-flex align-items-center justify-content-center">
+                                    <p class="text-muted">Здесь будет график активности заявок</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">Последние действия</h5>
+                            </div>
+                            <div class="card-body p-0">
+                                <ul class="list-group list-group-flush">
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <small class="text-muted">5 минут назад</small>
+                                            <p class="mb-0">Новый пользователь зарегистрирован</p>
+                                        </div>
+                                        <span class="badge bg-primary rounded-pill">Новый</span>
+                                    </li>
+                                    <li class="list-group-item">
+                                        <small class="text-muted">1 час назад</small>
+                                        <p class="mb-0">Заявка #1234 обновлена</p>
+                                    </li>
+                                    <li class="list-group-item">
+                                        <small class="text-muted">3 часа назад</small>
+                                        <p class="mb-0">Новый тикет создан пользователем</p>
+                                    </li>
+                                    <li class="list-group-item">
+                                        <small class="text-muted">Сегодня, 10:45</small>
+                                        <p class="mb-0">Системное обновление завершено</p>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Подключаем только одну версию Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Включение/отключение сайдбара на мобильных устройствах
+        document.addEventListener('DOMContentLoaded', function() {
+            const sidebar = document.querySelector('.sidebar');
+            const sidebarToggle = document.getElementById('sidebarToggle');
+            
+            if (sidebarToggle && sidebar) {
+                sidebarToggle.addEventListener('click', function() {
+                    sidebar.classList.toggle('show');
+                });
+            }
+            
+            // Закрываем сайдбар при клике вне его на мобильных
+            document.addEventListener('click', function(event) {
+                const isClickInside = sidebar.contains(event.target) || 
+                                    sidebarToggle.contains(event.target);
+                
+                if (!isClickInside && window.innerWidth <= 991.98) {
+                    sidebar.classList.remove('show');
+                }
+            });
+        });
+    </script>
+    <script src="/js/main.js"></script>
+    <script>
+        // Инициализация всплывающих подсказок
+        document.addEventListener('DOMContentLoaded', function() {
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+
+            // Подтверждение удаления пользователя
+            document.querySelectorAll('.delete-user').forEach(button => {
+                button.addEventListener('click', function(e) {
+                    if (!confirm('Вы уверены, что хотите удалить этого пользователя?')) {
+                        e.preventDefault();
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

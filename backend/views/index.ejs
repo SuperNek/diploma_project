@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .hero-section {
+            background: linear-gradient(135deg, #6e8efb 0%, #a777e3 100%);
+            color: white;
+            padding: 5rem 0;
+            margin-bottom: 3rem;
+            border-radius: 0 0 50% 50% / 0 0 100px 100px;
+        }
+        .feature-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border: none;
+            border-radius: 15px;
+            overflow: hidden;
+        }
+        .feature-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+        .feature-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(135deg, #6e8efb 0%, #a777e3 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .btn-gradient {
+            background: linear-gradient(135deg, #6e8efb 0%, #a777e3 100%);
+            border: none;
+            color: white;
+            font-weight: 500;
+            padding: 0.75rem 2rem;
+            border-radius: 50px;
+            transition: all 0.3s ease;
+        }
+        .btn-gradient:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            color: white;
+        }
+        .navbar {
+            padding: 1rem 0;
+            transition: all 0.3s ease;
+        }
+        .navbar.scrolled {
+            background-color: white !important;
+            box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
+        }
+        .navbar.scrolled .nav-link {
+            color: #333 !important;
+        }
+        .navbar.scrolled .navbar-brand {
+            color: #333 !important;
+        }
+    </style>
+</head>
+<body>
+    <!-- Навигация -->
+    <nav class="navbar navbar-expand-lg navbar-dark fixed-top py-3" id="mainNav">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="/">
+                <i class="fas fa-headset me-2"></i>Сервионика
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/">Главная</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/about">О системе</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/contact">Контакты</a>
+                    </li>
+                </ul>
+                <div class="d-flex">
+                    <% if (user) { %>
+                        <div class="dropdown">
+                            <a class="btn btn-outline-light dropdown-toggle d-flex align-items-center" href="#" role="button" id="userDropdown" data-bs-toggle="dropdown">
+                                <div class="me-2 d-none d-md-block">
+                                    <div class="fw-bold"><%= user.fullName || 'Пользователь' %></div>
+                                    <small class="text-white-50"><%= user.role === 'admin' ? 'Администратор' : 'Пользователь' %></small>
+                                </div>
+                                <div class="rounded-circle bg-white text-primary d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item" href="/profile"><i class="fas fa-user-circle me-2"></i>Профиль</a></li>
+                                <% if (user.role === 'admin') { %>
+                                    <li><a class="dropdown-item" href="/admin/dashboard"><i class="fas fa-tachometer-alt me-2"></i>Панель управления</a></li>
+                                <% } %>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-danger" href="/auth/logout"><i class="fas fa-sign-out-alt me-2"></i>Выйти</a></li>
+                            </ul>
+                        </div>
+                    <% } else { %>
+                        <a href="/auth/login" class="btn btn-outline-light me-2">
+                            <i class="fas fa-sign-in-alt me-1"></i> Войти
+                        </a>
+                        <a href="/auth/register" class="btn btn-gradient">
+                            <i class="fas fa-user-plus me-1"></i> Регистрация
+                        </a>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Герой секция -->
+    <header class="hero-section">
+        <div class="container position-relative" style="padding-top: 6rem;">
+            <div class="row align-items-center">
+                <div class="col-lg-6 mb-5 mb-lg-0">
+                    <h1 class="display-4 fw-bold mb-4">Управляйте заявками эффективно</h1>
+                    <p class="lead mb-4">Профессиональная система для обработки и управления заявками клиентов. Упростите свою работу и повысьте удовлетворенность клиентов.</p>
+                    <div class="d-flex flex-wrap gap-3">
+                        <% if (user) { %>
+                            <a href="/tickets/new" class="btn btn-light btn-lg px-4">
+                                <i class="fas fa-plus-circle me-2"></i> Создать заявку
+                            </a>
+                            <a href="/home" class="btn btn-outline-light btn-lg px-4">
+                                <i class="fas fa-ticket-alt me-2"></i> Мои заявки
+                            </a>
+                        <% } else { %>
+                            <a href="/auth/register" class="btn btn-light btn-lg px-4">
+                                <i class="fas fa-rocket me-2"></i> Начать
+                            </a>
+                            <a href="#features" class="btn btn-outline-light btn-lg px-4">
+                                <i class="fas fa-info-circle me-2"></i> Узнать больше
+                            </a>
+                        <% } %>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Основной контент -->
+    <main class="container my-5">
+        <!-- Функционал -->
+        <section id="features" class="py-5">
+            <div class="text-center mb-5">
+                <h2 class="display-5 fw-bold mb-3">Почему выбирают нас</h2>
+                <p class="lead text-muted">Инновационные решения для вашего бизнеса</p>
+            </div>
+            
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <div class="card h-100 feature-card p-4">
+                        <div class="card-body text-center">
+                            <div class="feature-icon">
+                                <i class="fas fa-bolt"></i>
+                            </div>
+                            <h3>Мгновенные уведомления</h3>
+                            <p class="text-muted">Получайте мгновенные уведомления о новых заявках и изменениях статуса.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card h-100 feature-card p-4">
+                        <div class="card-body text-center">
+                            <div class="feature-icon">
+                                <i class="fas fa-chart-line"></i>
+                            </div>
+                            <h3>Аналитика и отчеты</h3>
+                            <p class="text-muted">Детальная аналитика и настраиваемые отчеты для анализа эффективности.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card h-100 feature-card p-4">
+                        <div class="card-body text-center">
+                            <div class="feature-icon">
+                                <i class="fas fa-mobile-alt"></i>
+                            </div>
+                            <h3>Полностью адаптивный</h3>
+                            <p class="text-muted">Работает на любых устройствах: компьютерах, планшетах и смартфонах.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Как это работает -->
+        <section class="py-5 my-5">
+            <div class="row align-items-center">
+                <div class="col-lg-6 mb-5 mb-lg-0">
+                </div>
+                <div class="col-lg-6">
+                    <h2 class="fw-bold mb-4">Как это работает</h2>
+                    <div class="d-flex mb-4">
+                        <div class="flex-shrink-0 me-4">
+                            <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                                <span class="fw-bold">1</span>
+                            </div>
+                        </div>
+                        <div>
+                            <h5>Создайте заявку</h5>
+                            <p class="text-muted mb-0">Заполните простую форму с описанием проблемы или вопроса.</p>
+                        </div>
+                    </div>
+                    <div class="d-flex mb-4">
+                        <div class="flex-shrink-0 me-4">
+                            <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                                <span class="fw-bold">2</span>
+                            </div>
+                        </div>
+                        <div>
+                            <h5>Отслеживайте статус</h5>
+                            <p class="text-muted mb-0">Следите за ходом выполнения вашей заявки в реальном времени.</p>
+                        </div>
+                    </div>
+                    <div class="d-flex">
+                        <div class="flex-shrink-0 me-4">
+                            <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                                <span class="fw-bold">3</span>
+                            </div>
+                        </div>
+                        <div>
+                            <h5>Получите решение</h5>
+                            <p class="text-muted mb-0">Наша команда экспертов оперативно решит вашу проблему.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Призыв к действию -->
+        <section class="py-5 my-5 bg-light rounded-4">
+            <div class="container text-center py-5">
+                <h2 class="display-5 fw-bold mb-4">Готовы начать?</h2>
+                <p class="lead mb-4">Присоединяйтесь к тысячам довольных клиентов уже сегодня</p>
+                <a href="<%= user ? '/tickets/new' : '/auth/register' %>" class="btn btn-gradient btn-lg px-5">
+                    <i class="fas fa-rocket me-2"></i> Начать
+                </a>
+            </div>
+        </section>
+    </main>
+
+    <!-- Подвал -->
+    <footer class="bg-dark text-white py-5">
+        <div class="container">
+            <div class="row g-4">
+                <div class="col-lg-4">
+                    <h5 class="mb-4">Сервионика</h5>
+                    <p class="text-muted">Профессиональная система управления заявками и поддержкой пользователей. Упрощаем работу с клиентами.</p>
+                    <div class="d-flex gap-3 mt-4">
+                        <a href="#" class="text-white"><i class="fab fa-facebook-f"></i></a>
+                        <a href="#" class="text-white"><i class="fab fa-twitter"></i></a>
+                        <a href="#" class="text-white"><i class="fab fa-linkedin-in"></i></a>
+                        <a href="#" class="text-white"><i class="fab fa-instagram"></i></a>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <h6 class="mb-4">Компания</h6>
+                    <ul class="list-unstyled">
+                        <li class="mb-2"><a href="/about" class="text-muted text-decoration-none">О нас</a></li>
+                        <li class="mb-2"><a href="#" class="text-muted text-decoration-none">Карьера</a></li>
+                        <li class="mb-2"><a href="#" class="text-muted text-decoration-none">Блог</a></li>
+                        <li><a href="#" class="text-muted text-decoration-none">Партнерская программа</a></li>
+                    </ul>
+                </div>
+                <div class="col-6 col-md-3">
+                    <h6 class="mb-4">Ресурсы</h6>
+                    <ul class="list-unstyled">
+                        <li class="mb-2"><a href="#" class="text-muted text-decoration-none">Документация</a></li>
+                        <li class="mb-2"><a href="#" class="text-muted text-decoration-none">Руководства</a></li>
+                        <li class="mb-2"><a href="#" class="text-muted text-decoration-none">API</a></li>
+                        <li><a href="#" class="text-muted text-decoration-none">Статус</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-2">
+                    <h6 class="mb-4">Поддержка</h6>
+                    <ul class="list-unstyled">
+                        <li class="mb-2"><a href="/contact" class="text-muted text-decoration-none">Контакты</a></li>
+                        <li class="mb-2"><a href="#" class="text-muted text-decoration-none">Центр поддержки</a></li>
+                        <li><a href="#" class="text-muted text-decoration-none">Сообщить об ошибке</a></li>
+                    </ul>
+                </div>
+            </div>
+            <hr class="mt-4 mb-4">
+            <div class="row">
+                <div class="col-md-6 text-center text-md-start">
+                    <p class="mb-0 text-muted">&copy; <%= new Date().getFullYear() %> Сервионика. Все права защищены.</p>
+                </div>
+                <div class="col-md-6 text-center text-md-end">
+                    <a href="#" class="text-muted text-decoration-none me-3">Политика конфиденциальности</a>
+                    <a href="#" class="text-muted text-decoration-none">Условия использования</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Изменение навбара при скролле
+        window.addEventListener('scroll', function() {
+            const navbar = document.getElementById('mainNav');
+            if (window.scrollY > 50) {
+                navbar.classList.add('scrolled', 'bg-white');
+                navbar.classList.remove('navbar-dark');
+            } else {
+                navbar.classList.remove('scrolled', 'bg-white');
+                navbar.classList.add('navbar-dark');
+            }
+        });
+
+        // Инициализация tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    </script>
+</body>
+</html>

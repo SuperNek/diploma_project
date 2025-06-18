@@ -1,6 +1,7 @@
-import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { User } from '../models/index.js';
+import { validationResult } from 'express-validator';
+import { generateAuthToken, setAuthCookie, clearAuthCookie } from '../middleware/authMiddleware.js';
 
 // Вспомогательные функции валидации
 const validateEmail = (email) => {
@@ -11,218 +12,328 @@ const validatePassword = (password) => {
   return password.length >= 8;
 };
 
-// Конфигурация токенов
-const TOKEN_CONFIG = {
-  accessExpires: '15m',
-  refreshExpires: '7d',
+export const getLogin = (req, res) => {
+  // Если пользователь уже авторизован, перенаправляем на главную
+  if (req.cookies.accessToken) {
+    return res.redirect('/');
+  }
+  
+  // Получаем сообщения об ошибках
+  const errorMessages = req.flash('error');
+  const errors = [];
+  
+  // Если есть сообщение об ошибке, добавляем его в массив ошибок
+  if (errorMessages && errorMessages.length > 0) {
+    if (Array.isArray(errorMessages)) {
+      errors.push(...errorMessages);
+    } else {
+      errors.push(errorMessages);
+    }
+  }
+  
+  res.render('auth/login', {
+    title: 'Вход в систему',
+    errors: errors,
+    message: errors.length > 0 ? errors[0] : null,
+    success: req.flash('success')[0] || null,
+    formData: req.flash('formData')[0] || {}
+  });
 };
 
-const generateTokens = (user) => {
-  const accessToken = jwt.sign(
-    { id: user.id, email: user.email, role: user.role },
-    process.env.JWT_SECRET || 'default_secret',
-    { expiresIn: TOKEN_CONFIG.accessExpires }
-  );
+export const getRegister = (req, res) => {
+  // Если пользователь уже авторизован, перенаправляем на главную
+  if (req.cookies.accessToken) {
+    return res.redirect('/');
+  }
   
-  const refreshToken = jwt.sign(
-    { id: user.id },
-    process.env.JWT_REFRESH_SECRET || 'default_refresh_secret',
-    { expiresIn: TOKEN_CONFIG.refreshExpires }
-  );
+  // Получаем сообщения об ошибках
+  const errorMessages = req.flash('error');
+  const errors = [];
   
-  return { accessToken, refreshToken };
+  // Если есть сообщение об ошибке, добавляем его в массив ошибок
+  if (errorMessages && errorMessages.length > 0) {
+    if (Array.isArray(errorMessages)) {
+      errors.push(...errorMessages);
+    } else {
+      errors.push(errorMessages);
+    }
+  }
+  
+  res.render('auth/register', {
+    title: 'Регистрация',
+    errors: errors,
+    message: errors.length > 0 ? errors[0] : null,
+    success: req.flash('success')[0] || null,
+    formData: req.flash('formData')[0] || {}
+  });
 };
 
 export const register = async (req, res) => {
   try {
-    const { email, password, fullName, phone, role } = req.body;
+    const { email, password, confirmPassword, fullName, phone, agreeTerms } = req.body;
     
-    // Валидация
-    if (!validateEmail(email)) {
-      return res.status(400).json({ error: 'Invalid email format' });
+    // Сохраняем введенные данные для повторного отображения в форме
+    const formData = { email, fullName, phone, agreeTerms: agreeTerms === 'on' };
+    
+    // Валидация полей
+    const errors = [];
+    
+    if (!email || !validateEmail(email)) {
+      errors.push('Пожалуйста, введите корректный email');
     }
     
-    if (!validatePassword(password)) {
-      return res.status(400).json({ 
-        error: 'Password must be at least 8 characters long' 
-      });
+    if (!password || !validatePassword(password)) {
+      errors.push('Пароль должен содержать минимум 8 символов');
     }
     
-    // Проверка существующего пользователя
+    if (password !== confirmPassword) {
+      errors.push('Пароли не совпадают');
+    }
+    
+    if (!fullName || fullName.trim().length < 2) {
+      errors.push('Пожалуйста, введите ваше полное имя');
+    }
+    
+    if (!phone || phone.trim().length < 5) {
+      errors.push('Пожалуйста, введите корректный номер телефона');
+    }
+    
+    if (!agreeTerms) {
+      errors.push('Вы должны принять условия использования');
+    }
+    
+    if (errors.length > 0) {
+      req.flash('error', errors);
+      req.flash('formData', formData);
+      return res.redirect('/auth/register');
+    }
+    
+    // Проверяем, существует ли пользователь с таким email
     const existingUser = await User.findOne({ where: { email } });
     if (existingUser) {
-      return res.status(409).json({ error: 'Email already in use' });
+      errors.push('Пользователь с таким email уже зарегистрирован');
+      req.flash('error', errors);
+      req.flash('formData', formData);
+      return res.redirect('/auth/register');
     }
     
+    // Хешируем пароль
     const hashedPassword = await bcrypt.hash(password, 10);
+    
+    // Создаем пользователя
     const user = await User.create({
       email,
       password: hashedPassword,
       fullName,
       phone,
-      role: role || 'user'
+      role: 'user' // По умолчанию обычный пользователь
     });
     
-    const { accessToken, refreshToken } = generateTokens(user);
+    // Устанавливаем пользователя в сессию (без пароля)
+    const userData = user.get({ plain: true });
+    delete userData.password; // Удаляем пароль из сессии
+    req.session.user = userData;
     
-    // Устанавливаем cookies
-    res.cookie('accessToken', accessToken, {
-      httpOnly: true,
-      secure: false,
-      sameSite: 'strict',
-      path: '/',
-      maxAge: 15 * 60 * 1000 // 15 минут
-    });
+    // Генерируем токен и устанавливаем куки
+    const token = generateAuthToken(user);
+    setAuthCookie(res, token);
     
-    res.cookie('refreshToken', refreshToken, {
-      httpOnly: true,
-      secure: false,
-      sameSite: 'strict',
-      path: '/',
-      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 дней
-    });
+    // Устанавливаем пользователя в res.locals (уже без пароля)
+    res.locals.user = userData;
+    res.locals.isAuthenticated = true;
     
-    res.status(201).json({ 
-      user: { 
-        id: user.id, 
-        email: user.email, 
-        role: user.role,
-        fullName: user.fullName
-      } 
-    });
+    // Перенаправляем на страницу заявок
+    req.flash('success', 'Регистрация прошла успешно! Добро пожаловать!');
+    res.redirect('/tickets');
+    
   } catch (error) {
     console.error('Registration error:', error);
-    res.status(500).json({ 
-      error: 'Registration failed', 
-      details: process.env.NODE_ENV === 'development' ? error.message : null
-    });
+    req.flash('error', 'Произошла ошибка при регистрации');
+    res.redirect('/auth/register');
   }
 };
 
 export const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, remember } = req.body;
     
-    if (!validateEmail(email)) {
-      return res.status(400).json({ error: 'Invalid email format' });
+    // Сохраняем введенные данные для повторного отображения в форме
+    const formData = { email, remember: remember === 'on' };
+    
+    // Валидация полей
+    const errors = [];
+    if (!email) errors.push('Пожалуйста, введите email');
+    if (!password) errors.push('Пожалуйста, введите пароль');
+    
+    if (errors.length > 0) {
+      req.flash('error', errors);
+      req.flash('formData', formData);
+      return res.redirect('/auth/login');
     }
     
+    // Проверяем, существует ли пользователь
     const user = await User.findOne({ where: { email } });
-    
-    if (!user || !(await bcrypt.compare(password, user.password))) {
-      console.warn(`Failed login attempt for email: ${email}`);
-      return res.status(401).json({ error: 'Invalid credentials' });
+    if (!user) {
+      errors.push('Неверный email или пароль');
+      req.flash('error', errors);
+      req.flash('formData', formData);
+      return res.redirect('/auth/login');
     }
     
-    const { accessToken, refreshToken } = generateTokens(user);
+    // Проверяем пароль
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      errors.push('Неверный email или пароль');
+      req.flash('error', errors);
+      req.flash('formData', formData);
+      return res.redirect('/auth/login');
+    }
     
-    // Устанавливаем cookies
-    res.cookie('accessToken', accessToken, {
-      httpOnly: true,
-      secure: false,
-      sameSite: 'strict',
-      path: '/',
-      maxAge: 15 * 60 * 1000 // 15 минут
-    });
+    // Генерируем токен
+    const token = generateAuthToken(user);
     
-    res.cookie('refreshToken', refreshToken, {
-      httpOnly: true,
-      secure: false,
-      sameSite: 'strict',
-      path: '/',
-      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 дней
-    });
+    // Устанавливаем пользователя в сессию (без пароля)
+    const userData = user.get({ plain: true });
+    delete userData.password; // Удаляем пароль из сессии
+    req.session.user = userData;
     
-    res.json({ 
-      user: { 
-        id: user.id, 
-        email: user.email, 
-        role: user.role,
-        fullName: user.fullName
-      } 
-    });
+    // Устанавливаем куки с токеном
+    setAuthCookie(res, token);
+    
+    // Устанавливаем пользователя в res.locals
+    res.locals.user = userData;
+    res.locals.isAuthenticated = true;
+    
+    // Перенаправляем на домашнюю страницу или в админ-панель
+    const redirectTo = user.role === 'admin' ? '/admin/dashboard' : '/tickets';
+    req.flash('success', 'Вы успешно вошли в систему');
+    res.redirect(redirectTo);
+    
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ 
-      error: 'Login failed', 
-      details: process.env.NODE_ENV === 'development' ? error.message : null
-    });
+    
+    // Для API запросов возвращаем JSON
+    if (req.originalUrl && req.originalUrl.startsWith('/api/')) {
+      return res.status(500).json({ message: 'Ошибка при входе в систему' });
+    }
+    
+    // Для веб-запросов перенаправляем на страницу входа с сообщением об ошибке
+    req.flash('error', 'Произошла ошибка при входе в систему');
+    return res.redirect('/auth/login');
   }
 };
 
-export const refreshToken = async (req, res) => {
+// Выход пользователя
+export const logout = (req, res) => {
   try {
-    const refreshToken = req.cookies.refreshToken;
-    if (!refreshToken) return res.sendStatus(401);
-    
-    const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
-    const user = await User.findByPk(decoded.id);
-    if (!user) return res.sendStatus(403);
-    
-    const { accessToken } = generateTokens(user);
-    
-    res.cookie('accessToken', accessToken, {
-      httpOnly: true,
-      secure: false,
-      sameSite: 'strict',
-      path: '/',
-    });
-    
-    res.sendStatus(200);
-  } catch (error) {
-    res.sendStatus(403);
-  }
-};
+    // Clear user data
+    if (res.locals) {
+      res.locals.user = null;
+      res.locals.isAuthenticated = false;
+    }
 
-export const logout = async (req, res) => {
-  try {
-    // Очищаем JWT cookie
-    res.clearCookie('accessToken', {
-      httpOnly: true,
-      secure: false,
-      sameSite: 'strict',
-      path: '/',
-    });
+    // If session exists, destroy it
+    if (req.session) {
+      return req.session.destroy((err) => {
+        // Clear cookies after session is destroyed
+        clearAuthCookie(res);
+        res.clearCookie('connect.sid', { path: '/' });
+        
+        if (err) {
+          console.error('Ошибка при уничтожении сессии:', err);
+          return res.redirect('/');
+        }
+        
+        // Create a new session for flash message
+        req.session = null;
+        
+        // Use a simple redirect with a query parameter for success message
+        res.redirect('/?logout=success');
+      });
+    }
     
-    res.clearCookie('refreshToken', {
-      httpOnly: true,
-      secure: false,
-      sameSite: 'strict',
-      path: '/',
-    });
+    // If no session, just clear cookies and redirect
+    clearAuthCookie(res);
+    res.clearCookie('connect.sid', { path: '/' });
+    res.redirect('/');
     
-    res.status(200).json({ message: 'Logged out successfully' });
   } catch (error) {
     console.error('Logout error:', error);
-    res.status(500).json({ error: 'Logout failed' });
+    
+    // Clear cookies on error
+    clearAuthCookie(res);
+    res.clearCookie('connect.sid', { path: '/' });
+    
+    // Redirect with error parameter
+    res.redirect('/?logout=error');
   }
 };
 
-// Middleware для проверки активности
-export const activityMiddleware = async (req, res, next) => {
+// Middleware для проверки аутентификации
+export const requireAuth = async (req, res, next) => {
   try {
-    const accessToken = req.cookies.accessToken;
-    if (!accessToken) return res.sendStatus(401);
-    
-    const decoded = jwt.verify(accessToken, process.env.JWT_SECRET);
-    const user = await User.findByPk(decoded.id);
-    if (!user) return res.sendStatus(403);
-    
-    req.user = user;
-    next();
-  } catch (error) {
-    res.sendStatus(403);
-  }
-};
-
-export const checkAuth = async (req, res) => {
-  try {
-    if (!req.user) {
-      return res.status(401).json({ message: 'Нет пользователя' });
+    // Проверяем наличие пользователя в сессии
+    if (req.session && req.session.user) {
+      // Устанавливаем пользователя в запрос и локальные переменные
+      req.user = req.session.user;
+      res.locals.user = req.session.user;
+      res.locals.isAuthenticated = true;
+      return next();
     }
-    const { id, email, role, fullName } = req.user;
-    return res.status(200).json({ user: { id, email, role, fullName } });
+    
+    // Если пользователя нет в сессии, проверяем токен
+    const token = req.cookies.accessToken;
+    if (!token) {
+      // Сохраняем URL, на который пытался зайти пользователь
+      req.session.returnTo = req.originalUrl;
+      req.flash('error', 'Пожалуйста, войдите в систему для доступа к этой странице');
+      return res.redirect('/auth/login');
+    }
+    
+    // Если есть токен, но нет пользователя в сессии, пробуем загрузить пользователя
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+    const user = await User.findByPk(decoded.id, {
+      attributes: { exclude: ['password'] }
+    });
+    
+    if (!user) {
+      clearAuthCookie(res);
+      req.flash('error', 'Пользователь не найден');
+      return res.redirect('/auth/login');
+    }
+    
+    // Устанавливаем пользователя в сессию и локальные переменные
+    const userData = user.get({ plain: true });
+    req.session.user = userData;
+    req.user = userData;
+    res.locals.user = userData;
+    res.locals.isAuthenticated = true;
+    
+    // Продолжаем выполнение следующего middleware
+    return next();
   } catch (error) {
-    res.status(500).json({ message: 'Ошибка проверки' });
+    console.error('Auth middleware error:', error);
+    
+    // Для API запросов возвращаем JSON
+    if (req.originalUrl && req.originalUrl.startsWith('/api/')) {
+      return res.status(401).json({ message: 'Не авторизован' });
+    }
+    
+    // Для веб-запросов перенаправляем на страницу входа
+    req.flash('error', 'Ошибка аутентификации. Пожалуйста, войдите снова.');
+    return res.redirect('/auth/login');
   }
+};
+
+// Middleware для передачи сообщений во все шаблоны
+export const flashMessages = (req, res, next) => {
+  // Передаем сообщения в локальные переменные шаблонов
+  res.locals.messages = req.session.messages || {};
+  
+  // Очищаем сообщения после их использования
+  if (req.session.messages) {
+    req.session.messages = {};
+  }
+  
+  next();
 };

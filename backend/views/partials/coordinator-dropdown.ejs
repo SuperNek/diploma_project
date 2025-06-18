@@ -1,0 +1,25 @@
+<div class="btn-group">
+    <button type="button" 
+            class="btn btn-sm btn-outline-secondary dropdown-toggle" 
+            data-bs-toggle="dropdown" 
+            aria-expanded="false"
+            <%- ticket.status === 'closed' ? 'disabled' : '' %>>
+        <i class="fas fa-user-tie me-1"></i>
+        <%- ticket.Expert ? 'Эксперт' : 'Назначить эксперта' %>
+    </button>
+    <ul class="dropdown-menu dropdown-menu-end">
+        <% experts.forEach(function(expert) { %>
+            <li>
+                <a class="dropdown-item assign-expert <%- ticket.expertId === expert.id ? 'active' : '' %>" 
+                   href="#" 
+                   data-ticket-id="<%= ticket.id %>"
+                   data-expert-id="<%= expert.id %>">
+                    <%- expert.fullName %>
+                    <% if (ticket.expertId === expert.id) { %>
+                        <i class="fas fa-check ms-2"></i>
+                    <% } %>
+                </a>
+            </li>
+        <% }); %>
+    </ul>
+</div>

@@ -27,6 +27,14 @@ const Ticket = sequelize.define('Ticket', {
   description: {
     type: DataTypes.TEXT,
     allowNull: true
+  },
+  expertId: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: {
+      model: 'Users',
+      key: 'id'
+    }
   }
 }, {
   timestamps: true

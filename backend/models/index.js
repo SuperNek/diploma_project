@@ -3,18 +3,52 @@ import Ticket from './Ticket.js';
 import Message from './Message.js';
 
 // Ассоциации
-User.hasMany(Ticket, { foreignKey: 'userId' });
-Ticket.belongsTo(User, { foreignKey: 'userId' });
+// User -> Ticket (User has many Tickets)
+User.hasMany(Ticket, { 
+  foreignKey: 'userId',
+  as: 'tickets'
+});
 
-User.hasMany(Message, { foreignKey: 'authorId' });
-Message.belongsTo(User, { foreignKey: 'authorId' });
-
-Ticket.hasMany(Message, { foreignKey: 'ticketId' });
-Message.belongsTo(Ticket, { foreignKey: 'ticketId' });
-
+// Ticket -> User (Ticket belongs to User)
 Ticket.belongsTo(User, { 
-  as: 'Expert', 
-  foreignKey: 'expertId'
+  foreignKey: 'userId',
+  as: 'user'
+});
+
+// User -> Message (User has many Messages as author)
+User.hasMany(Message, { 
+  foreignKey: 'authorId',
+  as: 'messages'
+});
+
+// Message -> User (Message belongs to User as author)
+Message.belongsTo(User, { 
+  foreignKey: 'authorId',
+  as: 'author'
+});
+
+// Ticket -> Message (Ticket has many Messages)
+Ticket.hasMany(Message, { 
+  foreignKey: 'ticketId',
+  as: 'messages'
+});
+
+// Message -> Ticket (Message belongs to Ticket)
+Message.belongsTo(Ticket, { 
+  foreignKey: 'ticketId',
+  as: 'ticket'
+});
+
+// Ticket -> User (Ticket belongs to Expert)
+Ticket.belongsTo(User, { 
+  foreignKey: 'expertId',
+  as: 'Expert'
+});
+
+// User -> Ticket (Expert has many assigned tickets)
+User.hasMany(Ticket, {
+  foreignKey: 'expertId',
+  as: 'assignedTickets'
 });
 
 export {

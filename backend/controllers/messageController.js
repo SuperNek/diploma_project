@@ -34,6 +34,7 @@ export const getMessages = async (req, res) => {
       where: { ticketId },
       include: [{
         model: User,
+        as: 'author',
         attributes: ['id', 'email', 'fullName']
       }],
       order: [['createdAt', 'ASC']],
@@ -92,6 +93,7 @@ export const sendMessage = [
       const messageWithAuthor = await Message.findByPk(message.id, {
         include: [{
           model: User,
+          as: 'author',
           attributes: ['id', 'email', 'fullName']
         }]
       });

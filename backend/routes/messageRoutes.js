@@ -6,14 +6,17 @@ import {
   deleteMessage,
   markAsRead 
 } from '../controllers/messageController.js';
-import { auth } from '../middleware/authMiddleware.js';
+import { requireAuth } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-router.get('/:ticketId', auth, getMessages);
-router.post('/:ticketId', auth, sendMessage);
-router.put('/:messageId', auth, updateMessage);
-router.delete('/:messageId', auth, deleteMessage);
-router.patch('/:messageId/read', auth, markAsRead);
+// Защищаем все маршруты аутентификацией
+router.use(requireAuth);
+
+router.get('/:ticketId', getMessages);
+router.post('/:ticketId', sendMessage);
+router.put('/:messageId', updateMessage);
+router.delete('/:messageId', deleteMessage);
+router.patch('/:messageId/read', markAsRead);
 
 export default router;

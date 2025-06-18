@@ -1,0 +1,18 @@
+<header>
+    <nav class="navbar">
+        <div class="logo">
+            <a href="/">Support System</a>
+        </div>
+        <div class="nav-links">
+            <% if (locals.user) { %>
+                <a href="/tickets">Мои тикеты</a>
+                <a href="/tickets/new">Создать тикет</a>
+                <a href="/profile">Профиль</a>
+                <a href="/auth/logout">Выйти</a>
+            <% } else { %>
+                <a href="/auth/login">Войти</a>
+                <a href="/auth/register">Регистрация</a>
+            <% } %>
+        </div>
+    </nav>
+</header>
